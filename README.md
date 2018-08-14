@@ -16,3 +16,9 @@ As an example a planned tour is hosted here:
 The URL of the page contains the tour ID: https://www.komoot.com/tour/27555914
 
 Both solutions (QGIS and ArcGIS) use the tour ID "27555914" as an input, donwloads the geometry and creates a polyline and point layer.
+
+The layers in QGIS:
+![QGIS result](https://i.imgur.com/Nm0XFsX.png)
+
+The layers in ArcGIS:
+![QGIS result](https://i.imgur.com/fo8mw4j.png)
