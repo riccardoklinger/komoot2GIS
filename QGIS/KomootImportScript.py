@@ -24,6 +24,7 @@ from qgis.core import (QgsProcessing,
                        QgsField,
                        QgsFeature,
                        QgsGeometry,
+					   QgsPoint,
                        QgsPointXY,
                        QgsWkbTypes,
                        QgsCoordinateReferenceSystem)
@@ -50,6 +51,7 @@ class ExampleProcessingAlgorithm(QgsProcessingAlgorithm):
 
     RouteID = 'RouteID'
     PointLayer = 'PointLayer'
+    LineLayer = 'LineLayer'
 
     def tr(self, string):
         """
@@ -128,6 +130,13 @@ class ExampleProcessingAlgorithm(QgsProcessingAlgorithm):
                 QgsProcessing.TypeVectorPoint
             )
         )
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.LineLayer,
+                self.tr('Output Line layer'),
+                QgsProcessing.TypeVectorLine
+            )
+        )
         #self.addParameter(
         #    QgsProcessingOutputVectorLayer(
         #        self.PointLayer,
@@ -154,15 +163,32 @@ class ExampleProcessingAlgorithm(QgsProcessingAlgorithm):
             data = json.loads(url.read())
         feedback.setProgressText("Number of points: " + str(len(data["items"])))
         fields = QgsFields()
+        fields.append(QgsField("ID", QVariant.Int))
         fields.append(QgsField("LAT", QVariant.Double))
         fields.append(QgsField("LNG", QVariant.Double))
-		fields.append(QgsField("TIME", QVariant.Double))
-		fields.append(QgsField("HEIGHT", QVariant.Double))
+        fields.append(QgsField("TIME", QVariant.Double))
+        fields.append(QgsField("HEIGHT", QVariant.Double))
         (sink, dest_id) = self.parameterAsSink(parameters, self.PointLayer, context,
                                                fields, QgsWkbTypes.Point, QgsCoordinateReferenceSystem(4326))
+        id=0
+        points = []
         for vertex in data["items"]:
+            
             out_feat = QgsFeature()
+            points.append(QgsPoint(vertex["lng"],vertex["lat"]))
             out_feat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(vertex["lng"],vertex["lat"])))
-            out_feat.setAttributes([vertex["lat"],vertex["lng"],vertex["t"],vertex["alt"]])
+            out_feat.setAttributes([id, vertex["lat"],vertex["lng"],vertex["t"],vertex["alt"]])
             sink.addFeature(out_feat, QgsFeatureSink.FastInsert)
-        return {self.PointLayer: dest_id}
+            id+=1
+        fields = QgsFields()
+        fields.append(QgsField("ID", QVariant.String))
+        (sinkline, dest_id2) = self.parameterAsSink(parameters, self.LineLayer, context,
+                                               fields, QgsWkbTypes.LineString, QgsCoordinateReferenceSystem(4326))
+        out_feat = QgsFeature()
+        out_feat.setGeometry(QgsGeometry.fromPolyline(points))
+        out_feat.setAttributes([parameters['RouteID']])
+        sinkline.addFeature(out_feat)
+        results = {}
+        results[self.PointLayer]=sink
+        results[self.LineLayer]=sinkline
+        return results
